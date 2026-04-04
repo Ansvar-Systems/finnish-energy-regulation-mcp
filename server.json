@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "eu.ansvar/finnish-energy-regulation-mcp",
+  "description": "Query Finnish energy regulation: Energiavirasto market decisions, Fingrid grid codes and Datahub, TEM energy policy, Tukes electrical and gas safety",
+  "repository": {
+    "url": "https://github.com/Ansvar-Systems/finnish-energy-regulation-mcp",
+    "source": "github"
+  },
+  "homepage": "https://ansvar.eu",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "keywords": [
+    "energiavirasto",
+    "fingrid",
+    "tem",
+    "tukes",
+    "finnish-energy-regulation",
+    "finland",
+    "energy",
+    "grid-code",
+    "datahub",
+    "compliance",
+    "mcp",
+    "ansvar"
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@ansvar/finnish-energy-regulation-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

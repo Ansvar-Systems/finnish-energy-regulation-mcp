@@ -1,0 +1,102 @@
+{
+  "version": "1.0",
+  "mcp_name": "Finnish Energy Regulation MCP",
+  "tests": [
+    {
+      "id": "fi-energy-001",
+      "category": "search",
+      "description": "Search regulations for 'sahkomarkkina'",
+      "tool": "fi_energy_search_regulations",
+      "input": { "query": "sahkomarkkina" },
+      "assertions": { "result_not_empty": true, "min_results": 1 }
+    },
+    {
+      "id": "fi-energy-002",
+      "category": "data_retrieval",
+      "description": "Get regulation by reference (588/2013)",
+      "tool": "fi_energy_get_regulation",
+      "input": { "reference": "588/2013" },
+      "assertions": { "result_not_empty": true }
+    },
+    {
+      "id": "fi-energy-003",
+      "category": "search",
+      "description": "Search grid codes for 'taajuus'",
+      "tool": "fi_energy_search_grid_codes",
+      "input": { "query": "taajuus" },
+      "assertions": { "result_not_empty": true, "min_results": 1 }
+    },
+    {
+      "id": "fi-energy-004",
+      "category": "data_retrieval",
+      "description": "Get grid code by document ID",
+      "tool": "fi_energy_get_grid_code",
+      "input": { "document_id": 2 },
+      "assertions": { "result_not_empty": true }
+    },
+    {
+      "id": "fi-energy-005",
+      "category": "search",
+      "description": "Search decisions for 'siirtohinta'",
+      "tool": "fi_energy_search_decisions",
+      "input": { "query": "siirtohinta" },
+      "assertions": { "result_not_empty": true, "min_results": 1 }
+    },
+    {
+      "id": "fi-energy-006",
+      "category": "meta_tool",
+      "description": "About tool returns server metadata",
+      "tool": "fi_energy_about",
+      "input": {},
+      "assertions": { "result_not_empty": true }
+    },
+    {
+      "id": "fi-energy-007",
+      "category": "negative_test",
+      "description": "Non-existent regulation reference handles gracefully",
+      "tool": "fi_energy_get_regulation",
+      "input": { "reference": "NONEXISTENT-REF-999" },
+      "assertions": { "handles_gracefully": true }
+    },
+    {
+      "id": "fi-energy-008",
+      "category": "negative_test",
+      "description": "Non-existent grid code ID handles gracefully",
+      "tool": "fi_energy_get_grid_code",
+      "input": { "document_id": 99999 },
+      "assertions": { "handles_gracefully": true }
+    },
+    {
+      "id": "fi-energy-009",
+      "category": "search",
+      "description": "Search regulations with regulator filter",
+      "tool": "fi_energy_search_regulations",
+      "input": { "query": "turvallisuus", "regulator": "tukes" },
+      "assertions": { "result_not_empty": true, "min_results": 1 }
+    },
+    {
+      "id": "fi-energy-010",
+      "category": "search",
+      "description": "Search regulations with type filter",
+      "tool": "fi_energy_search_regulations",
+      "input": { "query": "sahko", "type": "laki" },
+      "assertions": { "result_not_empty": true, "min_results": 1 }
+    },
+    {
+      "id": "fi-energy-011",
+      "category": "search",
+      "description": "Search grid codes by code_type",
+      "tool": "fi_energy_search_grid_codes",
+      "input": { "query": "datahub", "code_type": "market_regulation" },
+      "assertions": { "result_not_empty": true }
+    },
+    {
+      "id": "fi-energy-012",
+      "category": "cross_reference",
+      "description": "Search decisions for emissions trading",
+      "tool": "fi_energy_search_decisions",
+      "input": { "query": "paastokauppa", "decision_type": "methodology" },
+      "assertions": { "result_not_empty": true, "min_results": 1 }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+# sources.yml -- Data provenance metadata
+# Reference: docs/mcp-infrastructure-blueprint.md
+
+schema_version: "1.0"
+mcp_name: "Finnish Energy Regulation MCP"
+category: "domain_intelligence"
+jurisdiction: "Finland"
+
+sources:
+  - name: "Energiavirasto (Energy Authority)"
+    authority: "Energiavirasto"
+    official_url: "https://energiavirasto.fi"
+    retrieval_method: "MANUAL_CURATION"
+    format: "HTML"
+    authentication: "none"
+    update_frequency: "quarterly"
+    license:
+      type: "Public Domain (Finnish government publications)"
+      url: "https://energiavirasto.fi"
+      summary: "Finnish government publications are freely available"
+    coverage:
+      scope: "Market regulation decisions, network pricing, emissions trading, renewable energy support"
+      item_count: 0
+    languages:
+      - "fi"
+
+  - name: "Fingrid Oyj (Finnish TSO)"
+    authority: "Fingrid"
+    official_url: "https://fingrid.fi"
+    retrieval_method: "MANUAL_CURATION"
+    format: "PDF"
+    authentication: "none"
+    update_frequency: "quarterly"
+    license:
+      type: "Public Domain (Finnish state-owned enterprise publications)"
+      url: "https://fingrid.fi"
+      summary: "Grid codes and market rules are public"
+    coverage:
+      scope: "Grid codes, balancing rules, reserve market regulations, Datahub requirements"
+      item_count: 0
+    languages:
+      - "fi"
+
+  - name: "Tyo- ja elinkeinoministrio (Ministry of Economic Affairs and Employment)"
+    authority: "TEM"
+    official_url: "https://tem.fi"
+    retrieval_method: "MANUAL_CURATION"
+    format: "HTML"
+    authentication: "none"
+    update_frequency: "quarterly"
+    license:
+      type: "Public Domain (Finnish government publications)"
+      url: "https://tem.fi"
+      summary: "Finnish government publications are freely available"
+    coverage:
+      scope: "Energy policy, energy legislation, energy efficiency, renewable energy strategy"
+      item_count: 0
+    languages:
+      - "fi"
+
+  - name: "Turvallisuus- ja kemikaalivirasto (Tukes)"
+    authority: "Tukes"
+    official_url: "https://tukes.fi"
+    retrieval_method: "MANUAL_CURATION"
+    format: "HTML"
+    authentication: "none"
+    update_frequency: "quarterly"
+    license:
+      type: "Public Domain (Finnish government publications)"
+      url: "https://tukes.fi"
+      summary: "Finnish safety regulations are public records"
+    coverage:
+      scope: "Electrical safety, gas safety, installation requirements, inspection and certification"
+      item_count: 0
+    languages:
+      - "fi"
+
+  - name: "Finlex (Finnish legislation database)"
+    authority: "Ministry of Justice"
+    official_url: "https://finlex.fi"
+    retrieval_method: "MANUAL_CURATION"
+    format: "HTML"
+    authentication: "none"
+    update_frequency: "quarterly"
+    license:
+      type: "Public Domain (Finnish government publications)"
+      url: "https://finlex.fi"
+      summary: "Finnish legislation is freely available"
+    coverage:
+      scope: "Energy acts, decrees, and government proposals"
+      item_count: 0
+    languages:
+      - "fi"

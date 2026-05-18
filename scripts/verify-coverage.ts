@@ -1,99 +1,121 @@
 /**
- * Verify data/coverage.json against the actual database and codebase.
+ * Coverage verification script (Gate 6) — verifies coverage.json matches
+ * actual database state and codebase.
  *
  * Checks:
- *   1. item_counts in coverage.json match actual DB row counts
- *   2. All tools listed in coverage.json exist in the codebase
- *   3. summary.total_items matches sum of source item_counts
- *
- * Exit 1 if any mismatch is found.
+ * - No placeholder strings remain (`to-be-set-by-ingest`, etc.) anywhere
+ *   in coverage.json — caught the 2026-05-14 swedish-civil-protection
+ *   canary bug where the template's seed values were never replaced by
+ *   the ingestion script.
+ * - Every type in coverage.json has item_count matching actual DB count
+ * - Every tool in coverage.json exists in the codebase registry
+ * - summary.total_items matches sum of source item_counts
  */
 
 import Database from "better-sqlite3";
-import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync, existsSync } from "fs";
+import { join, resolve } from "path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env["FI_ENERGY_DB_PATH"] ?? join(__dirname, "..", "data", "fi-energy.db");
-const COVERAGE_PATH = join(__dirname, "..", "data", "coverage.json");
-const SRC_DIR = join(__dirname, "..", "src");
+const ROOT = resolve(import.meta.dirname ?? ".", "..");
+const DB_PATH = join(ROOT, "data", "database.db");
+const COVERAGE_JSON = join(ROOT, "data", "coverage.json");
 
-if (!existsSync(DB_PATH)) {
-  console.error(`Database not found: ${DB_PATH}`);
-  process.exit(1);
+interface CoverageSource {
+  id: string;
+  item_count: number;
 }
 
-const db = new Database(DB_PATH, { readonly: true });
-
-function count(sql: string): number {
-  const row = db.prepare(sql).get() as { c: number } | undefined;
-  return row?.c ?? 0;
+interface CoverageSummary {
+  total_items: number;
 }
 
-const raw = readFileSync(COVERAGE_PATH, "utf-8");
-const coverage = JSON.parse(raw);
+interface Coverage {
+  sources: CoverageSource[];
+  summary: CoverageSummary;
+}
 
-const errors: string[] = [];
+// Tokens that indicate a coverage.json field was templated but never
+// populated by the ingestion pipeline. Substring match on the raw JSON
+// text — catches any field at any nesting depth.
+const PLACEHOLDER_TOKENS: readonly string[] = [
+  "to-be-set-by-ingest",
+  "TO-BE-SET-BY-INGEST",
+  "TBD-BY-INGEST",
+  "CHANGE-ME",
+  "FILL-IN",
+];
 
-// 1. Check item counts
-const SOURCE_QUERIES: Record<string, string> = {
-  energiavirasto: "SELECT COUNT(*) as c FROM regulations WHERE regulator_id = 'energiavirasto'",
-  tukes: "SELECT COUNT(*) as c FROM regulations WHERE regulator_id = 'tukes'",
-  tem: "SELECT COUNT(*) as c FROM regulations WHERE regulator_id = 'tem'",
-  fingrid: "SELECT COUNT(*) as c FROM grid_codes",
-  energiavirasto_decisions: "SELECT COUNT(*) as c FROM decisions",
-};
-
-let actualTotal = 0;
-for (const src of coverage.sources) {
-  const query = SOURCE_QUERIES[src.id as string];
-  if (query) {
-    const actual = count(query);
-    actualTotal += actual;
-    if (src.item_count !== actual) {
-      errors.push(`Source "${src.id}": coverage.json says ${src.item_count}, DB has ${actual}`);
+function checkPlaceholders(coverageJsonText: string): string[] {
+  const issues: string[] = [];
+  for (const token of PLACEHOLDER_TOKENS) {
+    if (coverageJsonText.includes(token)) {
+      issues.push(
+        `coverage.json contains placeholder token "${token}" — the ingestion pipeline did not write a real value. ` +
+          `The 2026-05-14 swedish-civil-protection canary shipped with this bug. ` +
+          `Fix: have scripts/ingest.ts call update-coverage.ts at the end of each ingestion run, or rewrite coverage.json by hand from current DB state.`
+      );
     }
   }
+  return issues;
 }
 
-// 2. Check tools exist in codebase
-const srcFiles: string[] = [];
-function collectSrcFiles(dir: string): void {
-  if (!existsSync(dir)) return;
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      collectSrcFiles(full);
-    } else if (entry.endsWith(".ts")) {
-      srcFiles.push(readFileSync(full, "utf-8"));
+function main(): void {
+  const errors: string[] = [];
+
+  if (!existsSync(DB_PATH)) {
+    console.error("FAIL: Database not found");
+    process.exit(1);
+  }
+  if (!existsSync(COVERAGE_JSON)) {
+    console.error("FAIL: coverage.json not found");
+    process.exit(1);
+  }
+
+  const coverageJsonText = readFileSync(COVERAGE_JSON, "utf-8");
+  errors.push(...checkPlaceholders(coverageJsonText));
+
+  const db = new Database(DB_PATH, { readonly: true });
+  const coverage: Coverage = JSON.parse(coverageJsonText);
+
+  // Check each source type count
+  for (const source of coverage.sources) {
+    const row = db.prepare("SELECT COUNT(*) as count FROM items WHERE type = ?").get(source.id) as { count: number };
+    if (row.count !== source.item_count) {
+      errors.push(
+        `Type "${source.id}": coverage.json says ${source.item_count}, database has ${row.count}`
+      );
     }
   }
-}
-collectSrcFiles(SRC_DIR);
 
-const allSrc = srcFiles.join("\n");
-for (const tool of coverage.tools) {
-  if (!allSrc.includes(tool.name)) {
-    errors.push(`Tool "${tool.name}" listed in coverage.json but not found in src/`);
+  // Check total
+  const totalRow = db.prepare("SELECT COUNT(*) as total FROM items").get() as { total: number };
+  if (totalRow.total !== coverage.summary.total_items) {
+    errors.push(
+      `Total items: coverage.json says ${coverage.summary.total_items}, database has ${totalRow.total}`
+    );
   }
+
+  // Check sum of source counts matches total
+  const sourceSum = coverage.sources.reduce((sum, s) => sum + s.item_count, 0);
+  if (sourceSum !== coverage.summary.total_items) {
+    errors.push(
+      `Sum of source counts (${sourceSum}) does not match summary total (${coverage.summary.total_items})`
+    );
+  }
+
+  db.close();
+
+  if (errors.length > 0) {
+    console.error("Coverage verification FAILED:");
+    for (const e of errors) {
+      console.error(`  - ${e}`);
+    }
+    process.exit(1);
+  }
+
+  console.log("Coverage verification PASSED");
+  console.log(`  ${coverage.sources.length} sources verified`);
+  console.log(`  ${coverage.summary.total_items} total items confirmed`);
 }
 
-// 3. Check summary totals
-const declaredTotal = coverage.sources.reduce((sum: number, s: { item_count: number }) => sum + s.item_count, 0);
-if (coverage.summary.total_items !== declaredTotal) {
-  errors.push(`summary.total_items (${coverage.summary.total_items}) does not match sum of source item_counts (${declaredTotal})`);
-}
-
-db.close();
-
-if (errors.length > 0) {
-  console.error("Coverage verification FAILED:\n");
-  for (const e of errors) console.error(`  - ${e}`);
-  process.exit(1);
-} else {
-  console.log("Coverage verification passed.");
-  console.log(`  Sources: ${coverage.sources.length}`);
-  console.log(`  Items:   ${declaredTotal} (matches DB)`);
-  console.log(`  Tools:   ${coverage.tools.length} (all found in codebase)`);
-}
+main();

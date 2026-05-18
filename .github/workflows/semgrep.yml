@@ -1,23 +1,28 @@
 name: Semgrep
-
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - '.github/workflows/semgrep.yml'
+  schedule:
+    - cron: '0 4 * * 1'  # Weekly, Monday 04:00 UTC
+  workflow_dispatch:
 
 jobs:
-  semgrep:
+  scan:
     runs-on: ubuntu-latest
     container:
       image: semgrep/semgrep
 
     steps:
       - uses: actions/checkout@v4
-      - run: semgrep scan --config auto --sarif --output semgrep.sarif || true
 
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: semgrep.sarif
-        if: always()
+      - name: Run Semgrep
+        run: semgrep ci
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}

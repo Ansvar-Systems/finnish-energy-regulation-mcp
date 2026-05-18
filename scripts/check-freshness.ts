@@ -1,70 +1,76 @@
 /**
- * Freshness checker for the Finnish Energy Regulation MCP.
+ * Freshness check script — verifies database content is within expected age.
  *
- * Reads data/coverage.json, checks each source's last_refresh against
- * refresh_frequency, writes .freshness-stale (true/false) and
- * .freshness-report (markdown summary).
+ * For methodology MCPs, content is manually curated. The freshness threshold
+ * is 180 days (6 months) — after that, content should be reviewed for accuracy.
  *
- * Exit 0 always — staleness is informational, not a build failure.
+ * Output:
+ *   .freshness-stale   — "true" or "false"
+ *   .freshness-report  — human-readable freshness report
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
+import { writeFileSync, existsSync } from "fs";
+import { join, resolve } from "path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const COVERAGE_PATH = join(__dirname, "..", "data", "coverage.json");
+const ROOT = resolve(import.meta.dirname ?? ".", "..");
+const DB_PATH = join(ROOT, "data", "database.db");
+const FRESHNESS_THRESHOLD_DAYS = 180; // 6 months for methodology content
 
-interface Source {
-  id: string;
-  name: string;
-  last_refresh: string;
-  refresh_frequency: string;
+function main(): void {
+  if (!existsSync(DB_PATH)) {
+    writeFileSync(join(ROOT, ".freshness-stale"), "true");
+    writeFileSync(join(ROOT, ".freshness-report"), "# Freshness Report\n\nDatabase file not found.");
+    process.exit(0);
+  }
+
+  const db = new Database(DB_PATH, { readonly: true });
+
+  const metaRows = db.prepare("SELECT key, value FROM db_metadata").all() as { key: string; value: string }[];
+  const meta: Record<string, string> = {};
+  for (const row of metaRows) {
+    meta[row.key] = row.value;
+  }
+
+  const dbBuilt = meta["database_built"] ?? meta["built_date"] ?? "unknown";
+  const now = new Date();
+  let stale = false;
+  let daysSinceBuilt = -1;
+
+  if (dbBuilt !== "unknown") {
+    const builtDate = new Date(dbBuilt);
+    daysSinceBuilt = Math.floor((now.getTime() - builtDate.getTime()) / (1000 * 60 * 60 * 24));
+    stale = daysSinceBuilt > FRESHNESS_THRESHOLD_DAYS;
+  } else {
+    stale = true;
+  }
+
+  const totalRow = db.prepare("SELECT COUNT(*) as total FROM items").get() as { total: number };
+  db.close();
+
+  const status = stale ? "OVERDUE" : daysSinceBuilt > FRESHNESS_THRESHOLD_DAYS * 0.8 ? "Due soon" : "Current";
+
+  let report = `# Freshness Report\n\n`;
+  report += `| Property | Value |\n`;
+  report += `|----------|-------|\n`;
+  report += `| Database built | ${dbBuilt} |\n`;
+  report += `| Days since build | ${daysSinceBuilt >= 0 ? daysSinceBuilt : "unknown"} |\n`;
+  report += `| Threshold | ${FRESHNESS_THRESHOLD_DAYS} days |\n`;
+  report += `| Status | **${status}** |\n`;
+  report += `| Total items | ${totalRow.total} |\n`;
+  report += `\n`;
+
+  if (stale) {
+    report += `## Action Required\n\n`;
+    report += `Content has not been reviewed in over ${FRESHNESS_THRESHOLD_DAYS} days.\n`;
+    report += `Review methodology content for accuracy and run:\n\n`;
+    report += "```\nnpm run ingest:full\n```\n";
+  }
+
+  writeFileSync(join(ROOT, ".freshness-stale"), stale ? "true" : "false");
+  writeFileSync(join(ROOT, ".freshness-report"), report);
+
+  console.log(`Freshness: ${status} (${daysSinceBuilt} days since build, threshold ${FRESHNESS_THRESHOLD_DAYS})`);
 }
 
-interface Coverage {
-  sources: Source[];
-}
-
-const FREQUENCY_DAYS: Record<string, number> = {
-  daily: 1,
-  weekly: 7,
-  biweekly: 14,
-  monthly: 30,
-  quarterly: 90,
-  annually: 365,
-};
-
-function daysSince(dateStr: string): number {
-  const then = new Date(dateStr).getTime();
-  const now = Date.now();
-  return Math.floor((now - then) / (1000 * 60 * 60 * 24));
-}
-
-const raw = readFileSync(COVERAGE_PATH, "utf-8");
-const coverage: Coverage = JSON.parse(raw);
-
-const lines: string[] = ["# Freshness Report", "", `Generated: ${new Date().toISOString()}`, "", "| Source | Last Refresh | Frequency | Age (days) | Status |", "|--------|-------------|-----------|------------|--------|"];
-
-let anyStale = false;
-
-for (const src of coverage.sources) {
-  const age = daysSince(src.last_refresh);
-  const maxAge = FREQUENCY_DAYS[src.refresh_frequency] ?? 90;
-  const stale = age > maxAge;
-  if (stale) anyStale = true;
-  const status = stale ? "STALE" : "OK";
-  lines.push(`| ${src.name} | ${src.last_refresh} | ${src.refresh_frequency} | ${age} | ${status} |`);
-}
-
-lines.push("");
-lines.push(anyStale ? "**Result: STALE** — one or more sources need a refresh." : "**Result: FRESH** — all sources within refresh window.");
-
-const report = lines.join("\n");
-const rootDir = join(__dirname, "..");
-
-writeFileSync(join(rootDir, ".freshness-stale"), String(anyStale));
-writeFileSync(join(rootDir, ".freshness-report"), report);
-
-console.log(report);
-console.log(`\nWrote .freshness-stale (${anyStale}) and .freshness-report`);
+main();

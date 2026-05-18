@@ -2,11 +2,11 @@
   "name": "@ansvar/finnish-energy-regulation-mcp",
   "version": "0.1.0",
   "mcpName": "eu.ansvar/finnish-energy-regulation-mcp",
-  "description": "Finnish energy regulation MCP — Energiavirasto market decisions, Fingrid grid codes and Datahub, TEM energy policy, Tukes electrical and gas safety",
+  "description": "Finnish energy regulation MCP \u2014 Energiavirasto market decisions, Fingrid grid codes and Datahub, TEM energy policy, Tukes electrical and gas safety",
   "type": "module",
-  "main": "dist/src/index.js",
+  "main": "dist/index.js",
   "bin": {
-    "finnish-energy-regulation-mcp": "dist/src/index.js"
+    "finnish-energy-regulation-mcp": "dist/index.js"
   },
   "files": [
     "dist",
@@ -45,14 +45,17 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/http-server.ts",
-    "start": "node dist/src/http-server.js",
+    "start": "node dist/http-server.js",
     "seed": "npx tsx scripts/seed-sample.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "tsc --noEmit",
-    "ingest:full": "tsx scripts/ingest-all.ts --force",
+    "ingest:full": "npm run ingest:fetch && npm run build:db && npm run coverage:update",
     "freshness:check": "tsx scripts/check-freshness.ts",
     "coverage:update": "tsx scripts/update-coverage.ts",
-    "coverage:verify": "tsx scripts/verify-coverage.ts"
+    "coverage:verify": "tsx scripts/verify-coverage.ts",
+    "ingest:fetch": "tsx scripts/ingest-fetch.ts",
+    "ingest:diff": "tsx scripts/ingest-diff.ts",
+    "test:contract": "echo \"No contract tests yet\" && exit 0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

@@ -1,8 +1,54 @@
 # Finnish Energy Regulation MCP
 
+<!-- ANSVAR-CTA-BEGIN -->
+> ### ▶ Try this MCP instantly via Ansvar Gateway
+> **50 free queries/day · no card required · OAuth signup at [ansvar.eu/gateway](https://ansvar.eu/gateway)**
+>
+> One endpoint, one OAuth signup, access from any MCP-compatible client.
+
+### Connect
+
+**Claude Code** (one line):
+
+```bash
+claude mcp add ansvar --transport http https://gateway.ansvar.eu/mcp
+```
+
+**Claude Desktop / Cursor** — add to `claude_desktop_config.json` (or `mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "ansvar": {
+      "type": "url",
+      "url": "https://gateway.ansvar.eu/mcp"
+    }
+  }
+}
+```
+
+**Claude.ai** — Settings → Connectors → Add custom connector → paste `https://gateway.ansvar.eu/mcp`
+
+First request opens an OAuth flow at [ansvar.eu/gateway](https://ansvar.eu/gateway). After signup, your client is bound to your account; tier (free / premium / team / company) determines fan-out, quota, and which downstream MCPs are reachable.
+
+---
+
+## Self-host this MCP
+
+You can also clone this repo and build the corpus yourself. The schema,
+fetcher, and tool implementations all live here. What is not in the repo is
+the pre-built database — TDM and standards-licensing constraints on the
+upstream sources mean we host the corpus on Ansvar infrastructure rather
+than redistribute it as a public artifact.
+
+Build your own: run this repo's ingestion script (entry-point varies per
+repo — typically `scripts/ingest.sh`, `npm run ingest`, or `make ingest`;
+check the repo root).
+<!-- ANSVAR-CTA-END -->
+
+
 MCP server for Finnish energy sector regulations -- Energiavirasto market rules, Fingrid grid codes, TEM energy policy, Tukes safety rules.
 
-[![npm version](https://badge.fury.io/js/@ansvar%2Ffinnish-energy-regulation-mcp.svg)](https://www.npmjs.com/package/@ansvar/finnish-energy-regulation-mcp)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Covers four Finnish energy regulators with full-text search across regulations, grid codes, and regulatory decisions. All data is in Finnish.
@@ -19,51 +65,6 @@ Built by [Ansvar Systems](https://ansvar.eu) -- Stockholm, Sweden
 | **Fingrid Oyj** (Finnish TSO) | Electricity transmission, grid codes, Datahub, balancing market, frequency regulation | [fingrid.fi](https://fingrid.fi) |
 | **TEM** (Ministry of Economic Affairs and Employment) | Energy policy, renewable energy support, energy efficiency, climate targets | [tem.fi](https://tem.fi) |
 | **Tukes** (Safety and Chemicals Agency) | Electrical safety, gas safety, pressure equipment, product safety | [tukes.fi](https://tukes.fi) |
-
----
-
-## Quick Start
-
-### Use Remotely (No Install Needed)
-
-**Endpoint:** `https://mcp.ansvar.eu/finnish-energy-regulation/mcp`
-
-| Client | How to Connect |
-|--------|---------------|
-| **Claude Desktop** | Add to `claude_desktop_config.json` (see below) |
-| **Claude Code** | `claude mcp add finnish-energy-regulation --transport http https://mcp.ansvar.eu/finnish-energy-regulation/mcp` |
-
-**Claude Desktop** -- add to `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "finnish-energy-regulation": {
-      "type": "url",
-      "url": "https://mcp.ansvar.eu/finnish-energy-regulation/mcp"
-    }
-  }
-}
-```
-
-### Use Locally (npm)
-
-```bash
-npx @ansvar/finnish-energy-regulation-mcp
-```
-
-Or add to Claude Desktop config for stdio:
-
-```json
-{
-  "mcpServers": {
-    "finnish-energy-regulation": {
-      "command": "npx",
-      "args": ["-y", "@ansvar/finnish-energy-regulation-mcp"]
-    }
-  }
-}
-```
 
 ---
 
